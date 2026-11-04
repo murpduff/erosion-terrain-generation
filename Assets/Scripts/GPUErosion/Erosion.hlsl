@@ -49,7 +49,7 @@ VertInfo Erosion(VertInfo v, int layer, float f, float a) {
     float phase = dot(o, d) * f;
 
     float stripe = cos(phase) * a;
-    float2 gradient = -f * a * sin(phase);
+    float2 gradient = -f * a * sin(phase) * d;
 
     vert.pos += float3(0, stripe, 0);
     vert.gradient += gradient;
