@@ -3,6 +3,9 @@ Shader "Custom/ErosionMountains" {
         _BaseAmplitude("Base Amplitude", Float) = 1.0
         _BaseFrequency("Base Frequency", Float) = 1.0
         _Octaves("Octaves", Float) = 1
+        _ErosionLayers("Erosion Layers", Float) = 1
+        _ErosionFrequency("Erosion Frequency", Float) = 1
+        _ErosionMagnitude("Erosion Magnitude", Float) = 1
     }
 
     SubShader {
@@ -27,19 +30,27 @@ Shader "Custom/ErosionMountains" {
                 float3 positionWS : TEXCOORD1;
                 float3 normalWS : INTERNAL_NORMAL;
             };
-
+            
+            struct VertInfo {
+                float3 pos;
+                float2 gradient;
+            };
 
             CBUFFER_START(UnityPerMaterial)
                 float _BaseAmplitude;
                 float _BaseFrequency;
                 int _Octaves;
+
+                int _ErosionLayers;
+                float _ErosionFrequency;
+                float _ErosionMagnitude;
             CBUFFER_END
 
             #include "Erosion.hlsl"
 
             Varyings vert(Attributes IN) {
                 float3 pos = IN.positionOS.xyz;
-                Varyings OUT = Erosion(pos.xz);
+                Varyings OUT = GetVertexInfo(pos.xz);
 
                 return OUT;
             }

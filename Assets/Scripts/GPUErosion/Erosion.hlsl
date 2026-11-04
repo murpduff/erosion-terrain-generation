@@ -4,9 +4,7 @@ float GetLighting(float3 normal, float3 lightDir) {
     return clamp(dot(normal, lightDir), 0.075, 1);
 }
 
-float3 GetNormal(float3 snoise) {
-    float2 g = snoise.xy;
-
+float3 GetNormal(float2 g) {
     float3 gradient = float3(g.x, g.x*g.x + g.y*g.y, g.y);
     float3 d = normalize(float3(-g.y, 0.0, g.x)); //perpendicular vector tangent to terrain
 
@@ -36,18 +34,47 @@ float3 GetNoise(float2 p) {
     return snoise;
 }
 
-Varyings Erosion(float2 p) {
+VertInfo Erosion(VertInfo v, int layer, float f, float a) {
+    if(layer >= _ErosionLayers) return v;
+
+    VertInfo vert = v;
+
+    float2 p = v.pos.xz;
+    float2 g = v.gradient;
+    float2 d = normalize(float2(-g.y, g.x));
+    float2 c = float2(0,0); //pivot point;
+
+    float2 o = p - c;
+
+    float phase = dot(o, d) * f;
+
+    float stripe = cos(phase) * a;
+    float2 gradient = -f * a * sin(phase);
+
+    vert.pos += float3(0, stripe, 0);
+    vert.gradient += gradient;
+
+    return vert;
+}
+
+Varyings GetVertexInfo(float2 p) {
     Varyings OUT;
     
     float3 snoise = GetNoise(p);
 
     float h = snoise.z;
-    float3 normal = GetNormal(snoise);
+    float3 normal = GetNormal(snoise.xy);
     
     float3 pos = float3(p.x, h, p.y);
 
-    OUT.positionHCS = TransformObjectToHClip(pos);
-    OUT.normalWS = normal;
+    VertInfo vert;
+    vert.pos = pos;
+    vert.gradient = snoise.xy;
+
+    vert = Erosion(vert, 0, _ErosionFrequency, _ErosionMagnitude);
+
+    OUT.positionHCS = TransformObjectToHClip(vert.pos);
+    OUT.normalWS = GetNormal(vert.gradient);
 
     return OUT;
 }
