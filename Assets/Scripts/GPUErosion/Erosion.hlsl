@@ -34,22 +34,37 @@ float3 GetNoise(float2 p) {
     return snoise;
 }
 
-VertInfo Erosion(VertInfo v, int layer, float f, float a) {
-    if(layer >= _ErosionLayers) return v;
-
+VertInfo Erosion(VertInfo v, float f, float a) {
     VertInfo vert = v;
 
-    float2 p = v.pos.xz;
+    float layerCell = _CellSize / f;
+    float2 p = v.pos.xz / layerCell;
+    float2 ip = floor(p);
+
     float2 g = v.gradient;
     float2 d = normalize(float2(-g.y, g.x));
-    float2 c = float2(0,0); //pivot point;
 
-    float2 o = p - c;
+    const float TAU = 2 * 3.14159265;
 
-    float phase = dot(o, d) * f;
+    float W = 0;
+    float stripe = 0;
+    float2 gradient = float2(0, 0);
+    for(int y = -2; y <= 2; y++)
+    for(int x = -2; x <= 2; x++) {
+        float2 c = ip + float2(x, y) + float2(0.5, 0.5); //pivot point, set to the center of each cell
+        float2 o = p - c;
 
-    float stripe = cos(phase) * a;
-    float2 gradient = -f * a * sin(phase) * d;
+        float w = exp(-dot(o,o));
+        float phase = dot(o, d) * TAU;
+        
+        stripe += cos(phase) * a * w;
+        gradient += -TAU * a * sin(phase) * d / layerCell * w; //chain rule
+
+        W += w;
+    }
+
+    stripe /= W;
+    gradient /= W;
 
     vert.pos += float3(0, stripe, 0);
     vert.gradient += gradient;
@@ -71,8 +86,13 @@ Varyings GetVertexInfo(float2 p) {
     vert.pos = pos;
     vert.gradient = snoise.xy;
 
-    vert = Erosion(vert, 0, _ErosionFrequency, _ErosionMagnitude);
+    for(int i = 0; i < _ErosionLayers; i++) {
+        float f = _ErosionFrequency * pow(2.0, i);
+        float a = _ErosionMagnitude * pow(0.5, i);
+        vert = Erosion(vert, f, a);
+    }
 
+    OUT.positionWS = vert.pos;
     OUT.positionHCS = TransformObjectToHClip(vert.pos);
     OUT.normalWS = GetNormal(vert.gradient);
 

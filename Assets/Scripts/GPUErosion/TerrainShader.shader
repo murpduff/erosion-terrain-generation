@@ -6,6 +6,7 @@ Shader "Custom/ErosionMountains" {
         _ErosionLayers("Erosion Layers", Float) = 1
         _ErosionFrequency("Erosion Frequency", Float) = 1
         _ErosionMagnitude("Erosion Magnitude", Float) = 1
+        _CellSize("Cell Size", Float) = 1
     }
 
     SubShader {
@@ -44,6 +45,8 @@ Shader "Custom/ErosionMountains" {
                 int _ErosionLayers;
                 float _ErosionFrequency;
                 float _ErosionMagnitude;
+
+                int _CellSize;
             CBUFFER_END
 
             #include "Erosion.hlsl"
@@ -56,8 +59,9 @@ Shader "Custom/ErosionMountains" {
             }
 
             half4 frag(Varyings IN) : SV_Target {
+                // float2 ip = floor(IN.positionWS.xz/_CellSize) * _CellSize/500.0;
                 float3 normal = IN.normalWS.xyz;
-                half4 color = half4(1,1,1,1) * GetLighting(normal, GetMainLight().direction);
+                half4 color = half4(1.0,1.0,1.0,1.0) * GetLighting(normal, GetMainLight().direction);
                 return color;
             }
             ENDHLSL
